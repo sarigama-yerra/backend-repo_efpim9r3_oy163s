@@ -1,48 +1,51 @@
 """
-Database Schemas
+Database Schemas for ViralQuoteMachine
 
-Define your MongoDB collection schemas here using Pydantic models.
-These schemas are used for data validation in your application.
-
-Each Pydantic model represents a collection in your database.
-Model name is converted to lowercase for the collection name:
-- User -> "user" collection
-- Product -> "product" collection
-- BlogPost -> "blogs" collection
+Each Pydantic model represents a MongoDB collection.
+Collection name is the lowercase class name.
 """
+from pydantic import BaseModel, Field, HttpUrl, EmailStr
+from typing import Optional, List, Literal
+from datetime import datetime
 
-from pydantic import BaseModel, Field
-from typing import Optional
+QuoteCategory = Literal["motivational", "love", "business", "fitness", "funny"]
 
-# Example schemas (replace with your own):
+class Quote(BaseModel):
+    text: str = Field(..., description="Quote content")
+    category: QuoteCategory = Field(..., description="Quote category")
+    author: Optional[str] = Field(None, description="Author if applicable")
+    image_url: Optional[HttpUrl] = Field(None, description="Hosted image URL")
+    width: Optional[int] = Field(None)
+    height: Optional[int] = Field(None)
+    watermark: bool = Field(True, description="Whether image contains watermark")
+    quality: Literal["standard", "high"] = Field("standard")
+    affiliate_links: List[HttpUrl] = Field(default_factory=list, description="Amazon affiliate links")
+    likes: int = Field(0)
+    views: int = Field(0)
+    posted: bool = Field(False, description="Posted to social platforms")
+    platforms: List[str] = Field(default_factory=list, description="Where posted")
+    seo_title: Optional[str] = None
+    seo_description: Optional[str] = None
+
+class Subscriber(BaseModel):
+    email: EmailStr
+    created_from: Literal["web", "import", "api"] = "web"
+    active: bool = True
 
 class User(BaseModel):
-    """
-    Users collection schema
-    Collection name: "user" (lowercase of class name)
-    """
-    name: str = Field(..., description="Full name")
-    email: str = Field(..., description="Email address")
-    address: str = Field(..., description="Address")
-    age: Optional[int] = Field(None, ge=0, le=120, description="Age in years")
-    is_active: bool = Field(True, description="Whether user is active")
+    email: EmailStr
+    name: Optional[str] = None
+    is_premium: bool = False
+    stripe_customer_id: Optional[str] = None
+    stripe_subscription_id: Optional[str] = None
 
-class Product(BaseModel):
-    """
-    Products collection schema
-    Collection name: "product" (lowercase of class name)
-    """
-    title: str = Field(..., description="Product title")
-    description: Optional[str] = Field(None, description="Product description")
-    price: float = Field(..., ge=0, description="Price in dollars")
-    category: str = Field(..., description="Product category")
-    in_stock: bool = Field(True, description="Whether product is in stock")
+class GenerationJob(BaseModel):
+    triggered_by: Literal["cron", "manual", "web"] = "cron"
+    status: Literal["pending", "running", "completed", "failed"] = "pending"
+    total_quotes: int = 0
+    error: Optional[str] = None
 
-# Add your own schemas here:
-# --------------------------------------------------
-
-# Note: The Flames database viewer will automatically:
-# 1. Read these schemas from GET /schema endpoint
-# 2. Use them for document validation when creating/editing
-# 3. Handle all database operations (CRUD) directly
-# 4. You don't need to create any database endpoints!
+class Click(BaseModel):
+    quote_id: str
+    url: HttpUrl
+    at: datetime = Field(default_factory=datetime.utcnow)
